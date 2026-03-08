@@ -1,0 +1,41 @@
+name: Build iOS Tweak (arm64-iOS Platform ID 2)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ldid (for pseudo-signing)
+        run: brew install ldid
+
+      - name: Locate iPhoneOS SDK
+        id: sdk
+        run: echo "SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)" >> $GITHUB_ENV
+
+      - name: Compile as iOS dylib (Platform ID 2)
+        run: |
+          clang \
+            -target arm64-apple-ios14.0 \
+            -isysroot "${{ env.SDKROOT }}" \
+            -miphoneos-version-min=14.0 \
+            -dynamiclib \
+            -O0 \
+            -o tweak.dylib tweak.c
+
+      - name: Pseudo-sign with ldid (required for dlopen on iOS)
+        run: ldid -S tweak.dylib
+
+      - name: Upload signed dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: tweak-dylib
+          path: tweak.dylib
