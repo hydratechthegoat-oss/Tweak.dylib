@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <mach-o/dyld.h>
 
+// === FIX: Bypass Apple's "system is unavailable on iOS" restriction ===
+int system(const char *command) __attribute__((weak_import));
+// =====================================================================
+
 __attribute__((constructor))
 void send_aslr_info(void) {
     uintptr_t slide = _dyld_get_image_vmaddr_slide(0);
